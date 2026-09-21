@@ -154,6 +154,30 @@ class Test(TestCase):
             def a(): pass
         ''', m.RedefinedWhileUnused)
 
+    def test_redefinedClassDunderClass(self):
+        """
+        Test that shadowing a ``__class__`` definition in a class suite with
+        another one raises a warning.
+        """
+        self.flakes('''
+        class A:
+            def __class__(): pass
+            def __class__(): pass
+        ''', m.RedefinedWhileUnused)
+
+    def test_classDunderClassPropertySetter(self):
+        """
+        Test that a ``__class__`` property with a setter in a class suite
+        does not raise a warning: the decorator reads the first binding.
+        """
+        self.flakes('''
+        class A:
+            @property
+            def __class__(self): pass
+            @__class__.setter
+            def __class__(self, __type): pass
+        ''')
+
     def test_redefinedIfElseFunction(self):
         """
         Test that shadowing a function definition twice in an if

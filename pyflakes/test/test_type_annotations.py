@@ -600,11 +600,51 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    def test_literal_type_typing_alias(self):
+        self.flakes("""
+        from typing import Literal as L
+
+        def f(x: L['a', 'b']) -> None:
+            return None
+        """)
+
+    def test_literal_type_typing_extensions_alias(self):
+        self.flakes("""
+        from typing_extensions import Literal as L
+
+        def f(x: L['a', 'b']) -> None:
+            return None
+        """)
+
     def test_annotated_type_typing_missing_forward_type(self):
         self.flakes("""
         from typing import Annotated
 
         def f(x: Annotated['integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    def test_annotated_type_typing_alias(self):
+        self.flakes("""
+        from typing import Annotated as WithSchema
+
+        def g(x: WithSchema[int, 'hello']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_extensions_alias(self):
+        self.flakes("""
+        from typing_extensions import Annotated as WithSchema
+
+        def g(x: WithSchema[int, 'hello']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_alias_missing_forward_type(self):
+        self.flakes("""
+        from typing import Annotated as WS
+
+        def g(x: WS[Undefined, 'meta']) -> None:
             return None
         """, m.UndefinedName)
 

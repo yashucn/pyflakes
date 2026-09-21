@@ -1054,6 +1054,10 @@ class Checker:
 
             if isinstance(scope, ClassScope):
                 if name == '__class__':
+                    # a direct access of a class-level ``__class__`` binding
+                    # (e.g. in a decorator) counts as a use of that binding
+                    if scope is self.scope and name in scope:
+                        scope[name].used = (self.scope, node)
                     return
                 elif can_access_class_vars is False:
                     # only generators used in a class scope can access the
@@ -1201,9 +1205,19 @@ class Checker:
             self.scope.globals.remove(name)
         else:
             try:
+                binding = self.scope[name]
                 del self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+            else:
+                # deleting a module-level binding which shadows a builtin
+                # makes the builtin visible again
+                if (
+                        isinstance(self.scope, ModuleScope) and
+                        not isinstance(binding, Builtin) and
+                        name in self.builtIns
+                ):
+                    self.scope[name] = Builtin(name)
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):
@@ -1365,10 +1379,10 @@ class Checker:
         handleChildren
 
     def SUBSCRIPT(self, node):
-        if _is_name_or_attr(node.value, 'Literal'):
+        if _is_name_or_attr(node.value, 'Literal') or _is_typing(node.value, 'Literal', self.scopeStack):
             with self._enter_annotation(AnnotationState.NONE):
                 self.handleChildren(node)
-        elif _is_name_or_attr(node.value, 'Annotated'):
+        elif _is_name_or_attr(node.value, 'Annotated') or _is_typing(node.value, 'Annotated', self.scopeStack):
             self.handleNode(node.value, node)
 
             # py39+
