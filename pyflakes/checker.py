@@ -1053,7 +1053,7 @@ class Checker:
                 func_depth += 1
 
             if isinstance(scope, ClassScope):
-                if name == '__class__':
+                if name == '__class__' and name not in scope:
                     return
                 elif can_access_class_vars is False:
                     # only generators used in a class scope can access the
@@ -1201,9 +1201,16 @@ class Checker:
             self.scope.globals.remove(name)
         else:
             try:
-                del self.scope[name]
+                binding = self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+            else:
+                if not isinstance(binding, Builtin) and name in self.builtIns:
+                    # deleting a name which shadows a builtin re-exposes the
+                    # builtin, so restore it rather than removing the name
+                    self.scope[name] = Builtin(name)
+                else:
+                    del self.scope[name]
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):
@@ -1365,10 +1372,16 @@ class Checker:
         handleChildren
 
     def SUBSCRIPT(self, node):
-        if _is_name_or_attr(node.value, 'Literal'):
+        if (
+                _is_name_or_attr(node.value, 'Literal') or
+                _is_typing(node.value, 'Literal', self.scopeStack)
+        ):
             with self._enter_annotation(AnnotationState.NONE):
                 self.handleChildren(node)
-        elif _is_name_or_attr(node.value, 'Annotated'):
+        elif (
+                _is_name_or_attr(node.value, 'Annotated') or
+                _is_typing(node.value, 'Annotated', self.scopeStack)
+        ):
             self.handleNode(node.value, node)
 
             # py39+

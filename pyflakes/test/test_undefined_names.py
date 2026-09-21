@@ -344,6 +344,30 @@ class Test(TestCase):
         """Del deletes bindings."""
         self.flakes('a = 1; del a; a', m.UndefinedName)
 
+    def test_delBuiltinShadow(self):
+        """Del of a name shadowing a builtin re-exposes the builtin."""
+        self.flakes('int = 42; del int; x = int("42")')
+
+    def test_delBuiltinShadows(self):
+        """Del of any builtin shadow re-exposes that builtin."""
+        for builtin in ('str', 'list', 'dict', 'set', 'tuple', 'len',
+                        'type', 'sum', 'map'):
+            with self.subTest(builtin=builtin):
+                self.flakes(f'{builtin} = 1; del {builtin}; y = {builtin}("x")')
+
+    def test_delBuiltinItself(self):
+        """Del of the builtin binding itself still leaves it undefined."""
+        self.flakes('del int; x = int("42")', m.UndefinedName)
+
+    def test_delFunctionScope(self):
+        """Del of a function-local binding still reports later usage."""
+        self.flakes('''
+        def f():
+            a = 1
+            del a
+            return a
+        ''', m.UndefinedName)
+
     def test_delGlobal(self):
         """Del a global binding from a function."""
         self.flakes('''

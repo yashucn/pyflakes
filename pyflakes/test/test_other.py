@@ -251,6 +251,28 @@ class Test(TestCase):
                 pass
         """)
 
+    def test_modernPropertyNamedDunderClass(self):
+        """A property named __class__ used by its setter is not a redefinition."""
+        self.flakes("""
+        class A:
+            @property
+            def __class__(self):
+                pass
+            @__class__.setter
+            def __class__(self, __type):
+                pass
+        """)
+
+    def test_dunderClassRedefinedInClassBody(self):
+        """Redefining __class__ in a class body without use still warns."""
+        self.flakes("""
+        class A:
+            def __class__(self):
+                pass
+            def __class__(self):
+                pass
+        """, m.RedefinedWhileUnused)
+
     def test_unaryPlus(self):
         """Don't die on unary +."""
         self.flakes('+1')

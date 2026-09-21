@@ -652,6 +652,46 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    def test_literal_type_typing_aliased(self):
+        self.flakes("""
+        from typing import Literal as L
+
+        def f(x: L['some string', 'foo bar']) -> None:
+            return None
+        """)
+
+    def test_literal_type_typing_extensions_aliased(self):
+        self.flakes("""
+        from typing_extensions import Literal as L
+
+        def f(x: L['some string']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_aliased(self):
+        self.flakes("""
+        from typing import Annotated as A
+
+        def f(x: A[int, '> 0']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_extensions_aliased(self):
+        self.flakes("""
+        from typing_extensions import Annotated as A
+
+        def f(x: A[int, '> 0']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_aliased_missing_forward_type(self):
+        self.flakes("""
+        from typing import Annotated as A
+
+        def f(x: A[Undefined, 'meta']) -> None:
+            return None
+        """, m.UndefinedName)
+
     def test_deferred_twice_annotation(self):
         self.flakes("""
             from queue import Queue
